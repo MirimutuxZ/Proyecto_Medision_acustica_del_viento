@@ -1,0 +1,49 @@
+original = load("D:datos_mat\TOA5_22815_Time_Series_2025-04-10-2.mat");
+data = original.data;
+
+% Magnitudes 
+v = sqrt(data.Ux.^2 + data.Uy.^2 + data.Uz.^2);
+T = data.T_SONIC;
+
+% Crear los vectores v(t) y v(t-1)
+v_t   = v(2:end);     % desde el segundo dato
+v_tm1 = v(1:end-1);   % hasta el penúltimo dato
+
+T_t   = T(2:end);
+T_tm1 = T(1:end-1);
+
+% Graficar dispersión
+figure;
+scatter(v_tm1, v_t, 10, 'filled');
+xlabel('v(t-1) [m/s]');
+ylabel('v(t) [m/s]');
+title('Correlación velocidad v(t) vs v(t-1)');
+grid on;
+hold on;
+
+% Agregar la línea f(x) = x en rojo
+xlims = xlim;  % límites del eje X
+ylims = ylim;  % límites del eje Y
+min_val = min([xlims ylims]); 
+max_val = max([xlims ylims]); 
+plot([min_val max_val], [min_val max_val], 'r', 'LineWidth', 1.5);
+
+hold off;
+
+% Graficar dispersión
+figure;
+scatter(T_tm1, T_t, 10, 'filled');
+xlabel('T(t-1) [°C]');
+ylabel('T(t) [°C]');
+title('Correlación Temperatura T(t) vs T(t-1)');
+grid on;
+hold on;
+
+% Agregar la línea f(x) = x en rojo
+xlims = xlim;  % límites del eje X
+ylims = ylim;  % límites del eje Y
+min_val = min([xlims ylims]); 
+max_val = max([xlims ylims]); 
+plot([min_val max_val], [min_val max_val], 'r', 'LineWidth', 1.5);
+
+hold off;
