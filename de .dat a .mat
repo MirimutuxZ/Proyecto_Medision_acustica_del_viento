@@ -1,0 +1,45 @@
+carpeta_dat = 'D:\datos_originales\';   
+carpeta_mat = 'D:\datos_mat\';          
+
+% Listar todos los .dat
+archivos = dir(fullfile(carpeta_dat, '*.dat'));
+
+% Inicializar tabla índice
+info = table('Size',[0 4], ...
+             'VariableTypes',{'string','string','double','datetime'}, ...
+             'VariableNames',{'NombreOriginal','NombreMAT','TamañoMB','FechaModificacion'});
+
+% === CONVERSIÓN ===
+for k = 1:length(archivos)
+    try
+        % Ruta completa del archivo .dat
+        archivo_dat = fullfile(archivos(k).folder, archivos(k).name);
+
+        % Leer solo una vez
+        data = readtable(archivo_dat);
+
+        % Crear nombre .mat
+        [~,nombre,~] = fileparts(archivos(k).name);
+        archivo_mat = fullfile(carpeta_mat, [nombre '.mat']);
+
+        % Guardar en .mat
+        save(archivo_mat, 'data');
+
+        % Crear fila nueva con la fecha ya convertida a datetime
+        nuevaFila = {archivos(k).name, ...
+                     [nombre '.mat'], ...
+                     archivos(k).bytes/1e6, ...
+                     datetime(archivos(k).datenum, 'ConvertFrom', 'datenum')};
+
+        % Agregar a la tabla
+        info = [info; nuevaFila];
+
+        fprintf('Convertido: %s --> %s\n', archivos(k).name, [nombre '.mat']);
+    catch ME
+        fprintf('Error en %s: %s\n', archivos(k).name, ME.message);
+    end
+end
+
+% === GUARDAR ÍNDICE ===
+writetable(info, fullfile(carpeta_mat, 'indice_archivos.csv'));
+save(fullfile(carpeta_mat, 'indice_archivos.mat'), 'info');
