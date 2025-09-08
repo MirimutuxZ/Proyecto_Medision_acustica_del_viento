@@ -1,0 +1,72 @@
+original = load("D:datos_mat\TOA5_22815_Time_Series_2025-04-10-2.mat");
+data = original.data;
+
+% Cargamos las componentes de velocidad y temperatura
+Ux = data.Ux;
+Uy = data.Uy;
+Uz = data.Uz;
+T = data.T_SONIC;
+
+% control de calidad
+valid_idx = abs(Ux) < 50 & abs(Uy) < 50 & abs(Uz) < 50 & T > -40 & T < 50;
+
+% Limpiamos los datos
+Ux_clean = Ux(valid_idx);
+Uy_clean = Uy(valid_idx);
+Uz_clean = Uz(valid_idx);
+T_clean = T(valid_idx);
+
+% Detección de valores extremos
+spike_threshold = 3;
+Ux_despike = despiking(Ux_clean, spike_threshold);
+Uy_despike = despiking(Uy_clean, spike_threshold);
+Uz_despike = despiking(Uz_clean, spike_threshold);
+T_despike = despiking(T_clean, spike_threshold);
+
+function data_out = despiking(data_in, threshold)
+    med_val = median(data_in);
+    mad_val = mad(data_in, 1);
+    spike_idx = abs(data_in - med_val) > threshold * mad_val;
+    data_out(spike_idx) = med_val;
+end
+
+% Parámetros de análisis
+fs = 60; % Frecuencia de muestreo (Hz)
+window_10min = 10 * 60 * fs; % Ventana de 10 minutos
+overlap = 0.5; % Solapamiento del 50%
+
+% Calcular estadisticas moviles
+n_windows = floor((length(Ux_despike) - window_10min) / ...
+    (window_10min * (1 - overlap))) + 1;
+stats_10min = zeros(n_windows, 7);
+for i = 1:n_windows
+    start_idx = round((i-1) * window_10min * (1 - overlap)) + 1;
+    end_idx = start_idx + window_10min - 1;
+    Ux_window = Ux_despike(start_idx:end_idx);
+    Uy_window = Uy_despike(start_idx:end_idx);
+    Uz_window = Uz_despike(start_idx:end_idx);
+    % Velocidad horizontal
+    U_horiz = sqrt(Ux_window.^2 + Uy_window.^2);
+    % Estadísticas
+    stats_10min(i,1) = mean(U_horiz);
+    stats_10min(i,2) = std(Ux_window);
+    stats_10min(i,3) = std(Uy_window);
+    stats_10min(i,4) = std(Uz_window); 
+    stats_10min(i,5) = stats_10min(i,2) / stats_10min(i,1);
+    stats_10min(i,6) = atan2d(mean(Uy_window), mean(Ux_window));
+    stats_10min(i,7) = std(atan2d(Uy_window, Ux_window));
+end
+
+% Visualización de series temporales
+figure;
+subplot(3,1,1);
+plot(stats_10min(:,1));
+ylabel('Velocidad Media (m/s)');
+title('Estadísticas de Viento - Períodos de 10 Minutos');
+subplot(3,1,2);
+plot(stats_10min(:,5));
+ylabel('Intensidad de Turbulencia');
+subplot(3,1,3);
+plot(stats_10min(:,6));
+ylabel('Dirección del Viento (°)');
+xlabel('Período de 10 Minutos');
